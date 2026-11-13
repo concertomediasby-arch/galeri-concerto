@@ -7,6 +7,7 @@
   const WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   let workerSiap = null;
   function siapkanWorker() {
+    if (!workerSiap && G.workerLokal) { pdfjsLib.GlobalWorkerOptions.workerSrc = G.workerLokal; workerSiap = Promise.resolve(); }
     if (!workerSiap) workerSiap = fetch(WORKER_CDN).then(r => r.text()).then(t => {
       pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([t], { type: 'text/javascript' }));
     }).catch(() => { pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_CDN; });
@@ -94,6 +95,11 @@
   // Data tiap mobil diambil dari server (Supabase): hanya mobil yang di-scan,
   // dengan link file sementara yang kedaluwarsa dalam beberapa menit.
   async function muatData(kode) {
+    if (G.preview) {                       // mode preview (tanpa server)
+      await new Promise(r => setTimeout(r, 150));
+      if (G.preview[kode]) return JSON.parse(JSON.stringify(G.preview[kode]));
+      throw Object.assign(new Error('tidak ada'), { kind: 'notfound' });
+    }
     const r = await fetch(G.apiUrl + '?kode=' + encodeURIComponent(kode), { cache: 'no-store' });
     if (r.status === 404) throw Object.assign(new Error('tidak ada'), { kind: 'notfound' });
     if (r.status === 410) throw Object.assign(new Error('kedaluwarsa'), { kind: 'expired' });
@@ -102,7 +108,7 @@
   }
   const kodeDariHash = () => {
     const h = decodeURIComponent(location.hash.slice(1)).trim().toLowerCase();
-    return /^[a-z0-9-]{3,40}$/.test(h) ? h : '';
+    return /^[a-z0-9-]{3,40}$/.test(h) ? h : (G.kodeAwal || '');
   };
 
   // =========================================================
@@ -112,7 +118,7 @@
   let dariKatalog = null;    // kode katalog jika mobil dibuka dari katalog
 
   function setHeader(judul, sub, back) {
-    const head = $('head'); head.innerHTML = '';
+    const head = $('head'); head.innerHTML = ''; head.classList.remove('slim');
     if (back) { const b = el('button', 'back', '‹ Katalog'); b.onclick = () => history.back(); head.append(b); }
     head.append(el('h1', null, judul || ''));
     if (sub) head.append(el('p', 'sub', sub));
@@ -160,7 +166,9 @@
     const grid = el('div', 'cars'); grid.style.marginTop = '14px'; main.append(grid);
     list.forEach(async m => {
       const card = el('div', 'car'), cover = el('div', 'cover'), meta = el('div', 'meta');
-      meta.append(el('div', 'name', m.nama || m.kode), el('div', 'go', 'Lihat ›'));
+      const nm = el('div', 'nm'); nm.append(el('div', 'name', m.nama || m.kode));
+      if (m.acara) nm.append(badgeAcara(m.acara));
+      meta.append(nm, el('div', 'go', 'Lihat ›'));
       card.append(cover, meta); grid.append(card);
       card.onclick = () => { location.hash = m.kode; };
       if (!m.sampul) cover.append(el('div', 'status', 'Belum ada foto'));
@@ -176,13 +184,30 @@
   // =========================================================
   let fotos = [], fotoCanvas = [], pdfs = [], pdfCache = [];
 
+  const IKON_PIALA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
+  function badgeAcara(teks) { const b = el('span', 'badge'); b.innerHTML = IKON_PIALA; b.append(document.createTextNode(teks)); return b; }
+
   function renderMobil(data, my, back) {
-    setHeader(data.judul || 'Galeri', data.subjudul, back);
+    // Header kecil (tombol kembali saja), judul besar ada di hero
+    const head = $('head'); head.innerHTML = ''; head.classList.toggle('slim', true);
+    if (back) { const b = el('button', 'back', '‹ Katalog'); b.onclick = () => history.back(); head.append(b); }
+    document.title = (data.judul || 'Galeri') + ' · ' + (G.namaSitus || '');
     const all = data.daftar || [];
     fotos = all.filter(x => x.jenis !== 'pdf'); pdfs = all.filter(x => x.jenis === 'pdf');
     fotoCanvas = []; pdfCache.forEach(p => p && p.pdf && p.pdf.destroy()); pdfCache = [];
     main.innerHTML = '';
-    if (!all.length) { main.append(el('div', 'status', 'Belum ada file.')); return; }
+
+    // ----- Hero: label acara + headline -----
+    const hero = el('section', 'hero' + (fotos.length ? '' : ' polos'));
+    const heroImg = el('div', 'hero-img'); hero.append(heroImg, el('div', 'shield'));
+    const txt = el('div', 'hero-text');
+    if (data.acara) txt.append(badgeAcara(data.acara));
+    txt.append(el('h1', null, data.judul || 'Galeri'));
+    if (data.subjudul) txt.append(el('p', null, data.subjudul));
+    hero.append(txt); main.append(hero);
+    if (data.deskripsi) main.append(el('p', 'deskripsi', data.deskripsi));
+
+    if (!all.length) { main.append(el('div', 'status', 'Foto segera hadir.')); return; }
 
     // ----- Slider foto -----
     if (fotos.length) {
@@ -208,6 +233,7 @@
         const s = slider.children[i];
         try {
           const c = await renderFoto(f.url); if (my !== gen) return; fotoCanvas[i] = c;
+          if (i === 0) heroImg.append(salin(c, Math.min(c.width, 1200)));
           s.innerHTML = '';
           s.append(salin(c, Math.min(c.width, 1000)), el('div', 'shield'), el('div', 'hint', '⤢ Ketuk'));
           if (f.nama) s.append(el('div', 'cap', f.nama));

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Kelola Galeri · Concerto Surabaya</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#17191e; --panel2:#1d2026; --line:#2a2d35; --text:#e9eaee; --muted:#8c909a; --accent:#d4a24c; --danger:#ef7b6b; --ok:#7bd88f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  .wrap { max-width:760px; margin:0 auto; padding:16px 14px 80px; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:4px 0 16px; }
+  h1 { font-size:19px; margin:0; } h2 { font-size:15px; margin:0 0 12px; }
+  .muted { color:var(--muted); font-size:13px; line-height:1.5; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; }
+  input[type=text], input[type=password], textarea, select { width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line);
+    background:#0f1115; color:var(--text); font-size:15px; font-family:inherit; }
+  textarea { min-height:72px; resize:vertical; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+  button, .btn { border:0; border-radius:10px; padding:11px 14px; font-size:14px; font-weight:600; cursor:pointer; background:var(--accent); color:#1a1405;
+    font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  button.ghost, .btn.ghost { background:#22252c; color:var(--text); font-weight:500; }
+  button.danger { background:transparent; color:var(--danger); border:1px solid rgba(239,123,107,.4); padding:7px 10px; font-size:12px; }
+  button:disabled { opacity:.5; cursor:default; }
+  .switch { display:flex; align-items:center; gap:10px; margin-top:12px; font-size:14px; }
+  .switch input { width:20px; height:20px; accent-color:var(--accent); }
+  .cars { display:flex; flex-direction:column; gap:8px; }
+  .car { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--line); cursor:pointer; }
+  .car .t { font-weight:600; font-size:15px; } .car .s { color:var(--muted); font-size:12px; margin-top:3px; }
+  .tag { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--accent); border:1px solid rgba(212,162,76,.5);
+    padding:3px 8px; border-radius:999px; white-space:nowrap; }
+  .tag.off { color:var(--muted); border-color:var(--line); }
+  .files { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  .file { background:var(--panel2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .file .img { aspect-ratio:4/3; background:#000 center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:13px; }
+  .file .m { padding:8px 10px; font-size:12px; display:flex; flex-direction:column; gap:6px; }
+  .file .n { word-break:break-all; color:var(--text); }
+  .file .acts { display:flex; gap:6px; flex-wrap:wrap; }
+  .file .acts button { padding:5px 8px; font-size:11px; }
+  .drop { border:1.5px dashed var(--line); border-radius:12px; padding:18px; text-align:center; color:var(--muted); font-size:13px; margin-top:12px; }
+  .drop.on { border-color:var(--accent); color:var(--text); }
+  .prog { margin-top:10px; display:flex; flex-direction:column; gap:6px; font-size:12px; }
+  .prog .p { display:flex; justify-content:space-between; gap:10px; background:#0f1115; border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  .ok { color:var(--ok); } .err { color:var(--danger); }
+  .qrwrap { display:grid; grid-template-columns:150px minmax(0,1fr); gap:14px; align-items:start; margin-top:12px; }
+  @media (max-width:520px) { .qrwrap { grid-template-columns:minmax(0,1fr); } }
+  .qrbox { background:#fff; border-radius:10px; padding:6px; width:150px; } .qrbox canvas { display:block; width:100%; height:auto; }
+  .link { font-size:13px; word-break:break-all; } .link a { color:var(--text); }
+  .back { background:none; border:0; color:var(--muted); padding:0; font-weight:500; font-size:14px; }
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#22252c; border:1px solid var(--line); padding:10px 16px;
+    border-radius:999px; font-size:13px; opacity:0; transition:.2s; pointer-events:none; z-index:9; } .toast.on { opacity:1; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Login ===== -->
+  <section id="vLogin" class="card" style="margin-top:40px">
+    <h1>Kelola Galeri</h1>
+    <p class="muted">Masukkan PIN admin untuk menambah mobil dan meng-upload foto &amp; PDF.</p>
+    <label for="pin">PIN admin</label>
+    <input id="pin" type="password" inputmode="text" autocomplete="current-password">
+    <label class="switch" style="color:var(--text)"><input id="ingat" type="checkbox" checked> Ingat di perangkat ini</label>
+    <div class="row"><button id="btnMasuk">Masuk</button></div>
+    <p id="loginErr" class="err" style="font-size:13px;min-height:1em"></p>
+  </section>
+
+  <!-- ===== Daftar mobil ===== -->
+  <section id="vDaftar" class="hidden">
+    <div class="top"><h1>Kelola Galeri</h1><button class="ghost" id="btnKeluar">Keluar</button></div>
+    <div class="row" style="margin:0 0 12px"><button id="btnBaru">+ Mobil baru</button></div>
+    <div id="daftar" class="cars"></div>
+  </section>
+
+  <!-- ===== Edit mobil ===== -->
+  <section id="vEdit" class="hidden">
+    <div class="top"><button class="back" id="btnKembali">‹ Semua mobil</button><span id="kodeLbl" class="muted"></span></div>
+
+    <div class="card">
+      <h2 id="editJudul">Mobil baru</h2>
+      <label for="fAcara">Label acara (opsional) — tampil di atas headline</label>
+      <input id="fAcara" type="text" placeholder="contoh: EMMA Final Asia 2026" maxlength="80">
+      <label for="fJudul">Headline / nama mobil *</label>
+      <input id="fJudul" type="text" placeholder="contoh: Aion Hyptec HT" maxlength="120">
+      <label for="fSub">Subjudul (opsional)</label>
+      <input id="fSub" type="text" placeholder="contoh: Sistem audio by Concerto Surabaya" maxlength="160">
+      <label for="fDesk">Deskripsi singkat (opsional)</label>
+      <textarea id="fDesk" maxlength="800" placeholder="Satu paragraf pendek di bawah headline"></textarea>
+      <label class="switch"><input id="fAktif" type="checkbox" checked> Tampilkan galeri (matikan untuk menyembunyikan sementara)</label>
+      <label class="switch"><input id="fKatalog" type="checkbox"> Masukkan ke QR katalog</label>
+      <div class="row"><button id="btnSimpan">Simpan</button><span id="simpanMsg" class="muted"></span></div>
+    </div>
+
+    <div id="panelQR" class="card hidden">
+      <h2>QR &amp; link mobil ini</h2>
+      <div class="qrwrap">
+        <div class="qrbox" id="qrBox"></div>
+        <div>
+          <div class="link" id="linkTxt"></div>
+          <div class="row">
+            <button id="btnUnduhQR">Download QR</button>
+            <button class="ghost" id="btnSalin">Salin link</button>
+            <a class="btn ghost" id="btnBuka" target="_blank" rel="noopener">Buka galeri</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="panelFile" class="card hidden">
+      <h2>Foto &amp; PDF</h2>
+      <p class="muted">Foto otomatis dikecilkan (maks. 1600 px) dan diberi nomor urut. Urutan di galeri mengikuti nomor di depan nama file. Foto pertama jadi gambar utama di atas headline.</p>
+      <div class="drop" id="drop">
+        <div style="margin-bottom:10px">Seret file ke sini, atau</div>
+        <button id="btnPilih">Pilih foto / PDF</button>
+        <input id="inFile" type="file" multiple accept="image/*,application/pdf" class="hidden">
+      </div>
+      <div class="prog" id="prog"></div>
+      <div class="files" id="files"></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="qrcode.js"></script>
+<script>
+(function () {
+  'use strict';
+  const API = 'https://ddxcjzykcrozxqwubexr.supabase.co/functions/v1/galeri-qr-admin';
+  const BASE = location.origin + '/';
+  const $ = id => document.getElementById(id);
+  const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2000); };
+  const tampil = v => ['vLogin', 'vDaftar', 'vEdit'].forEach(x => $(x).classList.toggle('hidden', x !== v));
+
+  // ---------- PIN ----------
+  let pin = '';
+  try { pin = localStorage.getItem('galeri-pin') || sessionStorage.getItem('galeri-pin') || ''; } catch (_) {}
+
+  async function api(aksi, data) {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ aksi, ...(data || {}) }) });
+    let j = {}; try { j = await r.json(); } catch (_) {}
+    if (r.status === 401) { keluar(); throw new Error(j.error === 'pin_belum_diatur' ? 'PIN admin belum diatur di Supabase.' : 'PIN salah.'); }
+    if (!r.ok) throw new Error(pesanError(j.error));
+    return j;
+  }
+  function pesanError(c) {
+    return ({ judul_kosong: 'Headline wajib diisi.', kode: 'Mobil tidak ditemukan.', nama_file: 'Nama file tidak valid.',
+      tipe_file: 'Jenis file tidak didukung (pakai JPG, PNG, WebP, atau PDF).', ukuran_file: 'File terlalu besar (maks. 20 MB).' })[c] || 'Terjadi kesalahan di server. Coba lagi.';
+  }
+  function keluar() {
+    pin = ''; try { localStorage.removeItem('galeri-pin'); sessionStorage.removeItem('galeri-pin'); } catch (_) {}
+    tampil('vLogin');
+  }
+
+  $('btnMasuk').onclick = async () => {
+    const p = $('pin').value.trim(); $('loginErr').textContent = '';
+    if (!p) { $('loginErr').textContent = 'Isi PIN dulu.'; return; }
+    pin = p; $('btnMasuk').disabled = true;
+    try {
+      await muatDaftar();
+      try { (($('ingat').checked) ? localStorage : sessionStorage).setItem('galeri-pin', p); } catch (_) {}
+      $('pin').value = '';
+    } catch (e) { $('loginErr').textContent = e.message; }
+    $('btnMasuk').disabled = false;
+  };
+  $('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnMasuk').click(); });
+  $('btnKeluar').onclick = keluar;
+
+  // ---------- Daftar ----------
+  let semua = [];
+  async function muatDaftar() {
+    const j = await api('daftar');
+    semua = j.mobil || [];
+    const box = $('daftar'); box.innerHTML = '';
+    const mobil = semua.filter(m => m.jenis === 'mobil');
+    if (!mobil.length) box.append(el('p', 'muted', 'Belum ada mobil. Klik "+ Mobil baru".'));
+    mobil.forEach(m => {
+      const c = el('div', 'car'), kiri = el('div');
+      kiri.append(el('div', 't', m.judul), el('div', 's', (m.subjudul || '') + (m.subjudul ? ' · ' : '') + 'kode ' + m.kode));
+      const kanan = el('div'); kanan.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end';
+      if (m.acara) kanan.append(el('span', 'tag', m.acara));
+      if (!m.aktif) kanan.append(el('span', 'tag off', 'Disembunyikan'));
+      c.append(kiri, kanan); c.onclick = () => bukaEdit(m); box.append(c);
+    });
+    tampil('vDaftar');
+  }
+  $('btnBaru').onclick = () => bukaEdit(null);
+  $('btnKembali').onclick = () => muatDaftar().catch(e => toast(e.message));
+
+  // ---------- Edit ----------
+  let cur = null;
+  function bukaEdit(m) {
+    cur = m;
+    $('editJudul').textContent = m ? 'Ubah mobil' : 'Mobil baru';
+    $('kodeLbl').textContent = m ? 'kode ' + m.kode : '';
+    $('fAcara').value = m?.acara || ''; $('fJudul').value = m?.judul || ''; $('fSub').value = m?.subjudul || '';
+    $('fDesk').value = m?.deskripsi || ''; $('fAktif').checked = m ? m.aktif : true; $('fKatalog').checked = m ? !!m.di_katalog : false;
+    $('simpanMsg').textContent = '';
+    $('panelQR').classList.toggle('hidden', !m); $('panelFile').classList.toggle('hidden', !m);
+    $('files').innerHTML = ''; $('prog').innerHTML = '';
+    if (m) { gambarQR(m); muatFile(); }
+    tampil('vEdit'); window.scrollTo(0, 0);
+  }
+
+  $('btnSimpan').onclick = async () => {
+    const data = { kode: cur?.kode, acara: $('fAcara').value, judul: $('fJudul').value, subjudul: $('fSub').value,
+      deskripsi: $('fDesk').value, aktif: $('fAktif').checked, di_katalog: $('fKatalog').checked };
+    if (!data.judul.trim()) { $('simpanMsg').textContent = 'Headline wajib diisi.'; $('fJudul').focus(); return; }
+    $('btnSimpan').disabled = true; $('simpanMsg').textContent = 'Menyimpan…';
+    try {
+      const j = await api('simpan', data);
+      const baru = !cur;
+      cur = { ...(cur || {}), ...data, kode: j.kode, judul: data.judul.trim() };
+      $('simpanMsg').textContent = baru ? 'Mobil dibuat. Sekarang upload foto di bawah.' : 'Tersimpan.';
+      if (baru) { $('editJudul').textContent = 'Ubah mobil'; $('kodeLbl').textContent = 'kode ' + j.kode;
+        $('panelQR').classList.remove('hidden'); $('panelFile').classList.remove('hidden'); muatFile(); }
+      gambarQR(cur);
+    } catch (e) { $('simpanMsg').textContent = e.message; }
+    $('btnSimpan').disabled = false;
+  };
+
+  // ---------- QR ----------
+  let qrCanvas = null;
+  function gambarQR(m) {
+    const url = BASE + '#' + m.kode, label = (m.judul || '').trim();
+    const q = qrcode(0, 'M'); q.addData(url); q.make();
+    const n = q.getModuleCount(), cell = Math.max(8, Math.floor(720 / (n + 8))), pad = cell * 4, size = n * cell + pad * 2;
+    const textH = label ? Math.round(cell * 6) : 0;
+    const c = document.createElement('canvas'); c.width = size; c.height = size + textH;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#000';
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(pad + k * cell, pad + r * cell, cell, cell);
+    if (label) {
+      x.font = '700 ' + Math.round(cell * 2.4) + 'px -apple-system, Segoe UI, Roboto, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      let t = label; while (x.measureText(t).width > size - pad * 2 && t.length > 3) t = t.slice(0, -2) + '…';
+      x.fillText(t, size / 2, size + textH / 2 - cell);
+    }
+    qrCanvas = c; $('qrBox').innerHTML = ''; $('qrBox').append(c);
+    $('linkTxt').innerHTML = ''; const a = el('a', null, url); a.href = url; a.target = '_blank'; a.rel = 'noopener'; $('linkTxt').append(a);
+    $('btnBuka').href = url;
+  }
+  $('btnUnduhQR').onclick = () => {
+    if (!qrCanvas) return;
+    const a = document.createElement('a'); a.download = 'QR-' + (cur.judul || cur.kode).replace(/[^a-z0-9]+/gi, '-') + '.png';
+    a.href = qrCanvas.toDataURL('image/png'); document.body.append(a); a.click(); a.remove();
+  };
+  $('btnSalin').onclick = async () => { try { await navigator.clipboard.writeText(BASE + '#' + cur.kode); toast('Link disalin'); } catch (_) { toast('Gagal menyalin'); } };
+
+  // ---------- File ----------
+  let fileAda = [];
+  async function muatFile() {
+    if (!cur?.kode) return;
+    const box = $('files'); box.innerHTML = '<p class="muted">Memuat file…</p>';
+    try {
+      const j = await api('file', { kode: cur.kode });
+      fileAda = j.file || [];
+      box.innerHTML = '';
+      if (!fileAda.length) { box.append(el('p', 'muted', 'Belum ada file.')); return; }
+      fileAda.forEach((f, i) => {
+        const card = el('div', 'file'), img = el('div', 'img');
+        if (f.url) img.style.backgroundImage = 'url("' + f.url + '")'; else img.textContent = f.nama.endsWith('.pdf') ? 'PDF' : '';
+        const m = el('div', 'm'); m.append(el('div', 'n', f.nama));
+        if (f.ukuran) m.append(el('div', 'muted', Math.round(f.ukuran / 1024) + ' KB'));
+        const acts = el('div', 'acts');
+        if (i > 0) { const up = el('button', 'ghost', '↑ Naik'); up.onclick = () => tukar(i, i - 1); acts.append(up); }
+        const del = el('button', 'danger', 'Hapus'); del.onclick = () => hapus(f.nama); acts.append(del);
+        m.append(acts); card.append(img, m); box.append(card);
+      });
+    } catch (e) { box.innerHTML = ''; box.append(el('p', 'err', e.message)); }
+  }
+  async function hapus(nama) {
+    if (!confirm('Hapus file "' + nama + '"? File yang dihapus tidak bisa dikembalikan.')) return;
+    try { await api('hapus_file', { kode: cur.kode, nama }); toast('File dihapus'); muatFile(); } catch (e) { toast(e.message); }
+  }
+  const nomor = n => { const m = /^(\d+)[-_.]/.exec(n); return m ? parseInt(m[1], 10) : 0; };
+  const tanpaNomor = n => n.replace(/^\d+[-_.]+/, '');
+  const pad2 = n => String(n).padStart(2, '0');
+  async function tukar(i, j) {
+    // Tukar posisi dua file dengan menukar nomor depannya
+    const a = fileAda[i], b = fileAda[j];
+    const na = nomor(a.nama) || (i + 1), nb = nomor(b.nama) || (j + 1);
+    const tmp = 'tmp-' + Date.now() + '-' + tanpaNomor(a.nama);
+    try {
+      await api('ganti_nama', { kode: cur.kode, nama: a.nama, baru: tmp });
+      await api('ganti_nama', { kode: cur.kode, nama: b.nama, baru: pad2(na) + '-' + tanpaNomor(b.nama) });
+      await api('ganti_nama', { kode: cur.kode, nama: tmp, baru: pad2(nb) + '-' + tanpaNomor(a.nama) });
+      muatFile();
+    } catch (e) { toast(e.message); muatFile(); }
+  }
+
+  const slug = s => (s || 'foto').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'foto';
+
+  async function kecilkan(file) {
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (_) {
+      bmp = await new Promise((ok, no) => { const u = URL.createObjectURL(file), i = new Image(); i.onload = () => { URL.revokeObjectURL(u); ok(i); }; i.onerror = no; i.src = u; });
+    }
+    const w0 = bmp.width, h0 = bmp.height, s = Math.min(1, 1600 / Math.max(w0, h0));
+    const c = document.createElement('canvas'); c.width = Math.round(w0 * s); c.height = Math.round(h0 * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
+  }
+
+  async function uploadSemua(list) {
+    if (!cur?.kode || !list.length) return;
+    let next = fileAda.reduce((m, f) => Math.max(m, nomor(f.nama)), 0);
+    const prog = $('prog');
+    for (const file of list) {
+      const row = el('div', 'p'), nm = el('span', null, file.name), st = el('span', 'muted', 'Menyiapkan…');
+      row.append(nm, st); prog.append(row);
+      try {
+        const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+        if (!isPdf && !file.type.startsWith('image/') && !/\.(heic|heif|jpe?g|png|webp)$/i.test(file.name)) throw new Error('Jenis file tidak didukung');
+        const blob = isPdf ? file : await kecilkan(file);
+        const tipe = isPdf ? 'application/pdf' : 'image/jpeg';
+        if (blob.size > 20 * 1024 * 1024) throw new Error('Lebih dari 20 MB');
+        next += 1;
+        const nama = pad2(next) + '-' + slug(file.name.replace(/\.[^.]+$/, '')) + (isPdf ? '.pdf' : '.jpg');
+        st.textContent = 'Meng-upload…';
+        const t = await api('minta_upload', { kode: cur.kode, nama, tipe, ukuran: blob.size });
+        const fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', new File([blob], nama, { type: tipe }));
+        const r = await fetch(t.signedUrl, { method: 'PUT', body: fd, headers: { 'x-upsert': 'false' } });
+        if (!r.ok) throw new Error('Upload gagal (' + r.status + ')');
+        st.textContent = 'Selesai'; st.className = 'ok';
+      } catch (e) { st.textContent = e.message; st.className = 'err'; }
+    }
+    muatFile();
+  }
+  $('btnPilih').onclick = () => $('inFile').click();
+  $('inFile').onchange = () => { const l = [...$('inFile').files]; $('inFile').value = ''; uploadSemua(l); };
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('on'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('on'); }));
+  drop.addEventListener('drop', e => uploadSemua([...e.dataTransfer.files]));
+
+  // ---------- Mulai ----------
+  if (pin) muatDaftar().catch(() => tampil('vLogin')); else tampil('vLogin');
+})();
+</script>
+</body>
+</html>
