@@ -127,6 +127,9 @@
     <div id="panelKartu" class="card hidden">
       <h2>Kartu QR A5 (siap cetak)</h2>
       <p class="muted">Desain gelap A5 dengan QR, label acara, dan headline mobil ini. Otomatis ikut berubah kalau headline atau label acara diubah lalu disimpan.</p>
+      <label for="fMerek">Teks merek di kiri atas kartu</label>
+      <input id="fMerek" type="text" maxlength="40" placeholder="contoh: CONCERTO SURABAYA">
+      <p class="muted" style="margin-top:6px">Kata pertama berwarna putih, kata berikutnya emas. Teks ini tersimpan di perangkat ini dan dipakai untuk semua kartu.</p>
       <div class="kartu">
         <div id="kartuBox"></div>
         <div>
@@ -299,13 +302,22 @@
     x.lineWidth = 1; x.strokeStyle = 'rgba(212,162,76,0.22)'; x.beginPath(); x.arc(499, 40, 180, 0, Math.PI * 2); x.stroke();
     x.strokeStyle = 'rgba(212,162,76,0.14)'; x.beginPath(); x.arc(499, 40, 120, 0, Math.PI * 2); x.stroke();
     x.textBaseline = 'alphabetic';
-    // baris atas: merek + label acara
-    const fMerek = '700 17px ' + BC;
-    teks('CONCERTO', 48, 65, fMerek, '#f2f2f4', 3);
-    teks('SURABAYA', 48 + lebar('CONCERTO ', fMerek, 3), 65, fMerek, EMAS, 3);
+    // baris atas: label acara (kanan) + teks merek (kiri, bisa diganti)
+    let bx = 511, bw = 0, label = '', fB = '700 11px ' + IN;
+    if (m.acara) { label = String(m.acara).toUpperCase(); bw = 12 + 14 + 7 + lebar(label, fB, 1.6) + 12; bx = 511 - bw; }
+    const merek = ambilMerek().toUpperCase().split(/\s+/).filter(Boolean);
+    if (merek.length) {
+      const ruang = (m.acara ? bx - 16 : 511) - 48, fM = u => '700 ' + u + 'px ' + BC;
+      let kata = merek.slice(), um = 17, sp = 3;
+      const ukur = () => lebar(kata.join(' '), fM(um), sp);
+      while (um > 9 && ukur() > ruang) { um -= 1; sp = Math.max(0.5, 3 * um / 17); }
+      while (kata.length > 1 && ukur() > ruang) { kata.pop(); kata[kata.length - 1] += '…'; }
+      const depan = kata[0], belakang = kata.slice(1).join(' ');
+      teks(depan, 48, 65, fM(um), '#f2f2f4', sp);
+      if (belakang) teks(belakang, 48 + lebar(depan + ' ', fM(um), sp), 65, fM(um), EMAS, sp);
+    }
     if (m.acara) {
-      const label = String(m.acara).toUpperCase(), fB = '700 11px ' + IN, wt = lebar(label, fB, 1.6);
-      const bw = 12 + 14 + 7 + wt + 12, bx = 511 - bw, by = 44;
+      const by = 44;
       x.strokeStyle = EMAS; x.lineWidth = 1; x.beginPath(); x.roundRect(bx, by, bw, 30, 15); x.stroke();
       // ikon piala sederhana
       x.save(); x.translate(bx + 12, by + 8); x.scale(14 / 24, 14 / 24); x.strokeStyle = EMAS; x.lineWidth = 2; x.lineCap = 'round'; x.lineJoin = 'round';
@@ -358,6 +370,20 @@
     kartuCanvas = c;
     $('kartuBox').innerHTML = ''; $('kartuBox').append(c);
   }
+  const MEREK_AWAL = 'CONCERTO SURABAYA';
+  function ambilMerek() {
+    const v = $('fMerek').value.trim();
+    return v || MEREK_AWAL;
+  }
+  try { $('fMerek').value = localStorage.getItem('galeri-merek') || MEREK_AWAL; } catch (_) { $('fMerek').value = MEREK_AWAL; }
+  let tMerek = null;
+  $('fMerek').addEventListener('input', () => {
+    clearTimeout(tMerek);
+    tMerek = setTimeout(() => {
+      try { localStorage.setItem('galeri-merek', $('fMerek').value.trim() || MEREK_AWAL); } catch (_) {}
+      if (cur && cur.kode) gambarKartu(cur);
+    }, 250);
+  });
   const namaKartu = () => 'Kartu-QR-A5-' + (cur.judul || cur.kode).replace(/[^a-z0-9]+/gi, '-');
   $('btnKartuPng').onclick = () => {
     if (!kartuCanvas) return;
