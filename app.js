@@ -311,14 +311,13 @@
     openModal('pdf', pdfs[i].nama || 'Dokumen');
     const { pdf } = pdfCache[i];
     $('mcount').textContent = pdf.numPages + ' hal.';
-    const box = el('div', 'pages'); box.append(el('div', 'shield')); mbody.append(box);
+    const box = el('div', 'pages'); mbody.append(box);  // tanpa lapisan pelindung: canvas sudah tidak bisa disentuh, dan scroll tetap jalan
     const width = Math.min(MAXW, Math.round(Math.min(box.clientWidth || 900, 900) * Math.min(devicePixelRatio || 1, 2)));
     for (let n = 1; n <= pdf.numPages; n++) {
       if (modalMode !== 'pdf' || !box.isConnected) return;
       const c = await renderPage(i, n, width);
       if (!box.isConnected) return;
-      box.insertBefore(c, box.lastChild);
-      box.insertBefore(el('div', 'pn', 'Halaman ' + n + ' / ' + pdf.numPages), box.lastChild);
+      box.append(c, el('div', 'pn', 'Halaman ' + n + ' / ' + pdf.numPages));
     }
   }
 

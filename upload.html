@@ -6,6 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Kelola Galeri · Concerto Surabaya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg:#0e0f12; --panel:#17191e; --panel2:#1d2026; --line:#2a2d35; --text:#e9eaee; --muted:#8c909a; --accent:#d4a24c; --danger:#ef7b6b; --ok:#7bd88f; }
   * { box-sizing:border-box; }
@@ -54,6 +56,17 @@
   .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#22252c; border:1px solid var(--line); padding:10px 16px;
     border-radius:999px; font-size:13px; opacity:0; transition:.2s; pointer-events:none; z-index:9; } .toast.on { opacity:1; }
   .hidden { display:none !important; }
+  .kartu { display:grid; grid-template-columns:220px minmax(0,1fr); gap:16px; align-items:start; margin-top:12px; }
+  @media (max-width:520px) { .kartu { grid-template-columns:minmax(0,1fr); } }
+  .kartu canvas { display:block; width:100%; max-width:220px; height:auto; border-radius:6px; box-shadow:0 0 0 1px var(--line); }
+  #cetak { display:none; }
+  @media print {
+    @page { size: A5 portrait; margin: 0; }
+    body > *:not(#cetak) { display:none !important; }
+    #cetak { display:block !important; }
+    #cetak img { display:block; width:148mm; height:210mm; }
+    body { background:#fff; }
+  }
 </style>
 </head>
 <body>
@@ -111,6 +124,21 @@
       </div>
     </div>
 
+    <div id="panelKartu" class="card hidden">
+      <h2>Kartu QR A5 (siap cetak)</h2>
+      <p class="muted">Desain gelap A5 dengan QR, label acara, dan headline mobil ini. Otomatis ikut berubah kalau headline atau label acara diubah lalu disimpan.</p>
+      <div class="kartu">
+        <div id="kartuBox"></div>
+        <div>
+          <div class="row" style="margin-top:0">
+            <button id="btnKartuPng">Download PNG (A5, 300 dpi)</button>
+            <button class="ghost" id="btnKartuCetak">Cetak / simpan PDF</button>
+          </div>
+          <p class="muted" style="margin-top:12px">Cetak di kertas A5 dengan skala 100% (jangan "fit to page"). Untuk PDF: pilih "Save as PDF" di jendela cetak, ukuran kertas A5, margin none.</p>
+        </div>
+      </div>
+    </div>
+
     <div id="panelFile" class="card hidden">
       <h2>Foto &amp; PDF</h2>
       <p class="muted">Foto otomatis dikecilkan (maks. 1600 px) dan diberi nomor urut. Urutan di galeri mengikuti nomor di depan nama file. Foto pertama jadi gambar utama di atas headline.</p>
@@ -125,6 +153,7 @@
   </section>
 </div>
 <div class="toast" id="toast"></div>
+<div id="cetak"></div>
 
 <script src="qrcode.js"></script>
 <script>
@@ -201,7 +230,7 @@
     $('fAcara').value = m?.acara || ''; $('fJudul').value = m?.judul || ''; $('fSub').value = m?.subjudul || '';
     $('fDesk').value = m?.deskripsi || ''; $('fAktif').checked = m ? m.aktif : true; $('fKatalog').checked = m ? !!m.di_katalog : false;
     $('simpanMsg').textContent = '';
-    $('panelQR').classList.toggle('hidden', !m); $('panelFile').classList.toggle('hidden', !m);
+    $('panelQR').classList.toggle('hidden', !m); $('panelKartu').classList.toggle('hidden', !m); $('panelFile').classList.toggle('hidden', !m);
     $('files').innerHTML = ''; $('prog').innerHTML = '';
     if (m) { gambarQR(m); muatFile(); }
     tampil('vEdit'); window.scrollTo(0, 0);
@@ -218,7 +247,7 @@
       cur = { ...(cur || {}), ...data, kode: j.kode, judul: data.judul.trim() };
       $('simpanMsg').textContent = baru ? 'Mobil dibuat. Sekarang upload foto di bawah.' : 'Tersimpan.';
       if (baru) { $('editJudul').textContent = 'Ubah mobil'; $('kodeLbl').textContent = 'kode ' + j.kode;
-        $('panelQR').classList.remove('hidden'); $('panelFile').classList.remove('hidden'); muatFile(); }
+        $('panelQR').classList.remove('hidden'); $('panelKartu').classList.remove('hidden'); $('panelFile').classList.remove('hidden'); muatFile(); }
       gambarQR(cur);
     } catch (e) { $('simpanMsg').textContent = e.message; }
     $('btnSimpan').disabled = false;
@@ -242,6 +271,7 @@
     qrCanvas = c; $('qrBox').innerHTML = ''; $('qrBox').append(c);
     $('linkTxt').innerHTML = ''; const a = el('a', null, url); a.href = url; a.target = '_blank'; a.rel = 'noopener'; $('linkTxt').append(a);
     $('btnBuka').href = url;
+    gambarKartu(m);
   }
   $('btnUnduhQR').onclick = () => {
     if (!qrCanvas) return;
@@ -249,6 +279,98 @@
     a.href = qrCanvas.toDataURL('image/png'); document.body.append(a); a.click(); a.remove();
   };
   $('btnSalin').onclick = async () => { try { await navigator.clipboard.writeText(BASE + '#' + cur.kode); toast('Link disalin'); } catch (_) { toast('Gagal menyalin'); } };
+
+  // ---------- Kartu A5 (desain gelap) ----------
+  const A5W = 559, A5H = 794, SKALA = 1748 / 559;   // 1748 x 2480 px = A5 @ 300 dpi
+  let kartuCanvas = null;
+  async function gambarKartu(m) {
+    try { await Promise.all([document.fonts.load('800 72px "Barlow Condensed"'), document.fonts.load('700 30px "Barlow Condensed"'),
+      document.fonts.load('400 15px Inter'), document.fonts.load('700 12px Inter')]); } catch (_) {}
+    const c = document.createElement('canvas'); c.width = Math.round(A5W * SKALA); c.height = Math.round(A5H * SKALA);
+    const x = c.getContext('2d'); x.scale(SKALA, SKALA);
+    const EMAS = '#d4a24c', PUTIH = '#ffffff', ABU = '#a9acb5';
+    const BC = '"Barlow Condensed", "Arial Narrow", sans-serif', IN = 'Inter, system-ui, sans-serif';
+    const ls = v => { try { x.letterSpacing = v + 'px'; } catch (_) {} };
+    const teks = (t, px, py, font, warna, spasi = 0, align = 'left') => { x.font = font; x.fillStyle = warna; ls(spasi); x.textAlign = align; x.fillText(t, px, py); ls(0); };
+    const lebar = (t, font, spasi = 0) => { x.font = font; ls(spasi); const w = x.measureText(t).width; ls(0); return w; };
+    // latar & dekorasi
+    x.fillStyle = '#0e0f12'; x.fillRect(0, 0, A5W, A5H);
+    x.fillStyle = EMAS; x.fillRect(0, 0, A5W, 6);
+    x.lineWidth = 1; x.strokeStyle = 'rgba(212,162,76,0.22)'; x.beginPath(); x.arc(499, 40, 180, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = 'rgba(212,162,76,0.14)'; x.beginPath(); x.arc(499, 40, 120, 0, Math.PI * 2); x.stroke();
+    x.textBaseline = 'alphabetic';
+    // baris atas: merek + label acara
+    const fMerek = '700 17px ' + BC;
+    teks('CONCERTO', 48, 65, fMerek, '#f2f2f4', 3);
+    teks('SURABAYA', 48 + lebar('CONCERTO ', fMerek, 3), 65, fMerek, EMAS, 3);
+    if (m.acara) {
+      const label = String(m.acara).toUpperCase(), fB = '700 11px ' + IN, wt = lebar(label, fB, 1.6);
+      const bw = 12 + 14 + 7 + wt + 12, bx = 511 - bw, by = 44;
+      x.strokeStyle = EMAS; x.lineWidth = 1; x.beginPath(); x.roundRect(bx, by, bw, 30, 15); x.stroke();
+      // ikon piala sederhana
+      x.save(); x.translate(bx + 12, by + 8); x.scale(14 / 24, 14 / 24); x.strokeStyle = EMAS; x.lineWidth = 2; x.lineCap = 'round'; x.lineJoin = 'round';
+      x.stroke(new Path2D('M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z')); x.stroke(new Path2D('M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3')); x.restore();
+      teks(label, bx + 12 + 14 + 7, by + 19.5, fB, EMAS, 1.6);
+    }
+    // judul
+    teks('GALERI SISTEM AUDIO', 48, 120, '600 12px ' + IN, ABU, 2.4);
+    const judul = String(m.judul || '').toUpperCase(), maxW = A5W - 96;
+    const fJ = u => '800 ' + u + 'px ' + BC;
+    const lebarMaks = (bs, u) => Math.max(...bs.map(t => lebar(t, fJ(u), 0.5)));
+    let ukuran = 72, baris = [judul];
+    while (ukuran > 48 && lebarMaks(baris, ukuran) > maxW) ukuran -= 2;
+    if (lebarMaks(baris, ukuran) > maxW) {
+      // pecah jadi 2 baris yang paling seimbang, lalu kecilkan sampai muat
+      const kata = judul.split(' ');
+      if (kata.length > 1) {
+        let terbaik = null;
+        for (let i = 1; i < kata.length; i++) {
+          const coba = [kata.slice(0, i).join(' '), kata.slice(i).join(' ')], w = lebarMaks(coba, 72);
+          if (!terbaik || w < terbaik.w) terbaik = { b: coba, w };
+        }
+        baris = terbaik.b;
+      }
+      ukuran = 72;
+      while (ukuran > 28 && lebarMaks(baris, ukuran) > maxW) ukuran -= 2;
+    }
+    let y = 132;
+    baris.forEach(b => { y += ukuran * 0.88; teks(b, 48, y, '800 ' + ukuran + 'px ' + BC, PUTIH, 0.5); y += ukuran * 0.07; });
+    y += 22;
+    if (m.subjudul) { teks(String(m.subjudul), 48, y, '400 15px ' + IN, '#c9ccd3'); y += 8; }
+    // panel QR + siku emas
+    const panel = 288, wrap = panel + 28, wx = (A5W - wrap) / 2, wy = y + 22;
+    x.strokeStyle = EMAS; x.lineWidth = 3; x.lineCap = 'butt';
+    const siku = (ax, ay, dx, dy) => { x.beginPath(); x.moveTo(ax + dx * 34, ay); x.lineTo(ax + dx * 10, ay); x.quadraticCurveTo(ax, ay, ax, ay + dy * 10); x.lineTo(ax, ay + dy * 34); x.stroke(); };
+    siku(wx + 1.5, wy + 1.5, 1, 1); siku(wx + wrap - 1.5, wy + 1.5, -1, 1); siku(wx + 1.5, wy + wrap - 1.5, 1, -1); siku(wx + wrap - 1.5, wy + wrap - 1.5, -1, -1);
+    const px = wx + 14, py = wy + 14;
+    x.fillStyle = PUTIH; x.beginPath(); x.roundRect(px, py, panel, panel, 16); x.fill();
+    const q = qrcode(0, 'H'); q.addData(BASE + '#' + m.kode); q.make();
+    const n = q.getModuleCount(), sel = 236 / n; x.fillStyle = '#000';
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(px + 26 + k * sel, py + 26 + r * sel, sel + 0.02, sel + 0.02);
+    y = wy + wrap + 26;
+    // ajakan scan
+    teks('SCAN UNTUK LIHAT GALERI', A5W / 2, y + 26, '700 30px ' + BC, PUTIH, 1.5, 'center');
+    teks('Foto & spesifikasi lengkap sistem audio mobil ini', A5W / 2, y + 50, '400 13px ' + IN, ABU, 0, 'center');
+    // footer
+    x.fillStyle = '#2a2d35'; x.fillRect(48, A5H - 72, A5W - 96, 1);
+    teks('Buka kamera HP · arahkan ke QR · ketuk link', 48, A5H - 46, '400 12px ' + IN, ABU);
+    teks(location.host || 'galeri.concerto.id', A5W - 48, A5H - 46, '600 12px ' + IN, '#f2f2f4', 0, 'right');
+    kartuCanvas = c;
+    $('kartuBox').innerHTML = ''; $('kartuBox').append(c);
+  }
+  const namaKartu = () => 'Kartu-QR-A5-' + (cur.judul || cur.kode).replace(/[^a-z0-9]+/gi, '-');
+  $('btnKartuPng').onclick = () => {
+    if (!kartuCanvas) return;
+    const a = document.createElement('a'); a.download = namaKartu() + '.png'; a.href = kartuCanvas.toDataURL('image/png');
+    document.body.append(a); a.click(); a.remove();
+  };
+  $('btnKartuCetak').onclick = () => {
+    if (!kartuCanvas) return;
+    const box = $('cetak'); box.innerHTML = '';
+    const img = new Image(); img.alt = 'Kartu QR A5'; img.src = kartuCanvas.toDataURL('image/png');
+    img.onload = () => { const t = document.title; document.title = namaKartu(); window.print(); document.title = t; };
+    box.append(img);
+  };
 
   // ---------- File ----------
   let fileAda = [];
