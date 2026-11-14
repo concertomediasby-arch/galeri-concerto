@@ -104,6 +104,8 @@
       <input id="fSub" type="text" placeholder="contoh: Sistem audio by Concerto Surabaya" maxlength="160">
       <label for="fDesk">Deskripsi singkat (opsional)</label>
       <textarea id="fDesk" maxlength="800" placeholder="Satu paragraf pendek di bawah headline"></textarea>
+      <label for="fWm">Teks watermark di foto &amp; PDF (opsional)</label>
+      <input id="fWm" type="text" maxlength="60" placeholder="kosong = CONCERTO SURABAYA">
       <label class="switch"><input id="fAktif" type="checkbox" checked> Tampilkan galeri (matikan untuk menyembunyikan sementara)</label>
       <label class="switch"><input id="fKatalog" type="checkbox"> Masukkan ke QR katalog</label>
       <div class="row"><button id="btnSimpan">Simpan</button><span id="simpanMsg" class="muted"></span></div>
@@ -231,7 +233,7 @@
     $('editJudul').textContent = m ? 'Ubah mobil' : 'Mobil baru';
     $('kodeLbl').textContent = m ? 'kode ' + m.kode : '';
     $('fAcara').value = m?.acara || ''; $('fJudul').value = m?.judul || ''; $('fSub').value = m?.subjudul || '';
-    $('fDesk').value = m?.deskripsi || ''; $('fAktif').checked = m ? m.aktif : true; $('fKatalog').checked = m ? !!m.di_katalog : false;
+    $('fDesk').value = m?.deskripsi || ''; $('fWm').value = m?.watermark || ''; $('fAktif').checked = m ? m.aktif : true; $('fKatalog').checked = m ? !!m.di_katalog : false;
     $('simpanMsg').textContent = '';
     $('panelQR').classList.toggle('hidden', !m); $('panelKartu').classList.toggle('hidden', !m); $('panelFile').classList.toggle('hidden', !m);
     $('files').innerHTML = ''; $('prog').innerHTML = '';
@@ -241,7 +243,7 @@
 
   $('btnSimpan').onclick = async () => {
     const data = { kode: cur?.kode, acara: $('fAcara').value, judul: $('fJudul').value, subjudul: $('fSub').value,
-      deskripsi: $('fDesk').value, aktif: $('fAktif').checked, di_katalog: $('fKatalog').checked };
+      deskripsi: $('fDesk').value, watermark: $('fWm').value, aktif: $('fAktif').checked, di_katalog: $('fKatalog').checked };
     if (!data.judul.trim()) { $('simpanMsg').textContent = 'Headline wajib diisi.'; $('fJudul').focus(); return; }
     $('btnSimpan').disabled = true; $('simpanMsg').textContent = 'Menyimpan…';
     try {
